@@ -1,6 +1,5 @@
 from telegram.ext import Updater, CommandHandler
 
-
 class NoteBot():
     def __init__(self, token):
         self.updater = Updater(token, use_context=True)
