@@ -1,7 +1,9 @@
-import redis
+from src.utils.redisManager import RedisManager
 
 if __name__ == '__main__':
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    token = r.get('TELEGRAM_TOKEN')
+    r = RedisManager()
+    r.set('foo', 'bar')
+    print(r.get('foo'))
+
 
 
