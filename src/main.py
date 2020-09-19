@@ -1,9 +1,7 @@
-from src.utils.redisManager import RedisManager
+from src.bot.note_bot import NoteBot
 
 if __name__ == '__main__':
-    r = RedisManager()
-    r.set('foo', 'bar')
-    print(r.get('foo'))
+    bot = NoteBot(token='1373845925:AAE70o7fuhI_s4tzc5zXV-T6uK4VcqHU2CM')
 
 
 
