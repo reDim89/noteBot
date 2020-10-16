@@ -5,14 +5,11 @@ from src.utils.redis_manager import RedisManager
 
 class NotionManager(NotionClient):
     def __init__(self, token):
-        super().__init__(self, token)
-        r = RedisManager()
-        r.save_notion_token(user_id, token)
-        # Тут нужно проверять, установлена ли страничка. Если да - сохранять ее в атрибут класса,
-    # чтобы не дергать каждый раз redis
+        super().__init__(token_v2=token)
+        self.storage = self.get_block('https://www.notion.so/redim89/To-Read-f2a6ab24a46b40e19f6ccdf16f7f4f34')
 
     def save_item(self, item):
-        self.create_record()
+        self.storage.children.add_new(PageBlock, title=item)
 
     @staticmethod
     def set_storage(user, url):
