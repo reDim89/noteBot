@@ -10,6 +10,7 @@ class NotionManager(NotionClient):
 
     def save_item(self, item):
         self.storage.children.add_new(PageBlock, title=item)
+        return 'Item saved!'
 
     @staticmethod
     def set_storage(user, url):
