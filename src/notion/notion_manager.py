@@ -8,6 +8,9 @@ class NotionManager(NotionClient):
         super().__init__(token_v2=token)
         self.storage = self.get_block('https://www.notion.so/redim89/To-Read-f2a6ab24a46b40e19f6ccdf16f7f4f34')
 
+    def get_top_level_pages(self):
+        super().get_top_level_pages()
+
     def save_item(self, item):
         self.storage.children.add_new(PageBlock, title=item)
         return 'Item saved!'
