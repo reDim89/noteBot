@@ -1,9 +1,10 @@
 import redis
+import os
 
 
 class RedisManager():
     def __init__(self, host='localhost', port=6379, db=0):
-        self.redis = redis.Redis(host, port, db)
+        self.redis = redis.from_url(os.environ.get("REDIS_URL"))
 
     def create_user(self, user_id, user_name):
         self.redis.hset(user_id, 'login', user_name)
