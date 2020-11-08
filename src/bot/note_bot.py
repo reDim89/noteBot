@@ -1,4 +1,5 @@
 import requests
+import os
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, Filters, MessageHandler, ConversationHandler
 from src.notion.notion_manager import NotionManager
@@ -6,8 +7,10 @@ from src.notion.notion_manager import NotionManager
 # TODO 1. Развернуть бота в Digital Ocean
 # TODO 2. Сделать сохранение в тело заметки, а не в тайтл
 
+
 class NoteBot():
     def __init__(self, token, redis_manager):
+        self.token = token
         self.redis_manager = redis_manager
         self.updater = Updater(token, use_context=True)
         self.dispatcher = self.updater.dispatcher
@@ -29,19 +32,31 @@ class NoteBot():
         self.dispatcher.add_handler(CommandHandler('start', self.start), 2)
         self.dispatcher.add_handler(CommandHandler('get_pages', self.get_pages), 2)
 
-        self.updater.start_polling()
+    def run(self, server=None, webhook_mode=False):
+        """Runs a bot either in a webhook mode, or via start_polling"""
+        if webhook_mode:
+            port = int(os.environ.get('PORT', 5000))
+            self.updater.start_webhook(listen="0.0.0.0",
+                                       port=int(port),
+                                       url_path=self.token)
+            self.updater.bot.setWebhook(server + self.token)
+        else:
+            self.updater.start_polling()
 
-    def start(self, update, context):
+    @staticmethod
+    def start(update, context):
         """Sends instructions"""
         instructions = 'blabla'
         context.bot.send_message(chat_id=update.effective_chat.id, text=instructions)
 
-    def cancel(self, update, context):
+    @staticmethod
+    def cancel(update, context):
         """Abort a conversation"""
         context.bot.send_message('Conversation cancelled! Use commands or send a message')
         return ConversationHandler.END
 
-    def set_token(self, update, context):
+    @staticmethod
+    def set_token(update, context):
         """Start a conversation to login into notion"""
         context.bot.send_message(chat_id=update.effective_chat.id, text='Send me your Notion token')
         return 'LOGIN'
@@ -87,6 +102,6 @@ class NoteBot():
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Oooops! Looks like you need to set your token')
 
-
+    @staticmethod
     def get_pages(self, update, context):
         context.user_data['notion_manager'].get_top_level_pages()
