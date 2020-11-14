@@ -22,7 +22,7 @@ class NoteBot():
         storage_states = {'SAVE_STORAGE': [MessageHandler(Filters.text, self.save_storage)]}
         storage_conv_handler = ConversationHandler(entry_points=storage_entry_points,
                                                    states=storage_states,
-                                                   storage_fallbacks=fallbacks)
+                                                   fallbacks=fallbacks)
 
         # Login conversation
         login_entry_points = [CommandHandler('set_token', self.set_token)]
