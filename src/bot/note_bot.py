@@ -8,7 +8,7 @@ from src.notion.notion_manager import NotionManager
 # TODO Сделать сохранение в тело заметки, а не в тайтл
 
 
-class NoteBot():
+class NoteBot:
     def __init__(self, token, redis_manager):
         self.token = token
         self.redis_manager = redis_manager
@@ -66,7 +66,8 @@ class NoteBot():
     @staticmethod
     def cancel(update, context):
         """Abort a conversation"""
-        context.bot.send_message('Conversation cancelled! Use commands or send a message')
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Conversation cancelled! Use commands or send a message')
         return ConversationHandler.END
 
     @staticmethod
