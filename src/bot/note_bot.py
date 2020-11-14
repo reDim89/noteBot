@@ -4,8 +4,8 @@ from telegram.ext import Updater
 from telegram.ext import CommandHandler, Filters, MessageHandler, ConversationHandler
 from src.notion.notion_manager import NotionManager
 
-# TODO 1. Развернуть бота в Digital Ocean
-# TODO 2. Сделать сохранение в тело заметки, а не в тайтл
+
+# TODO Сделать сохранение в тело заметки, а не в тайтл
 
 
 class NoteBot():
@@ -15,22 +15,31 @@ class NoteBot():
         self.updater = Updater(token, use_context=True)
         self.dispatcher = self.updater.dispatcher
 
-        # Login conversation
-        self.entry_points = [CommandHandler('set_token', self.set_token)]
-        self.states = {'LOGIN': [MessageHandler(Filters.text, self.login)]}
-        self.fallbacks = [MessageHandler(Filters.command, self.cancel)]
-        login_conv_handler = ConversationHandler(entry_points=self.entry_points,
-                                                 states=self.states,
-                                                 fallbacks=self.fallbacks)
+        fallbacks = [MessageHandler(Filters.command, self.cancel)]
 
-        # First group of handlers - conversation to set token and a message handler
+        # Storage conversation
+        storage_entry_points = [CommandHandler('set_storage', self.set_storage)]
+        storage_states = {'SAVE_STORAGE': [MessageHandler(Filters.text, self.save_storage)]}
+        storage_conv_handler = ConversationHandler(entry_points=storage_entry_points,
+                                                   states=storage_states,
+                                                   storage_fallbacks=fallbacks)
+
+        # Login conversation
+        login_entry_points = [CommandHandler('set_token', self.set_token)]
+        login_states = {'LOGIN': [MessageHandler(Filters.text, self.login)],
+                        'SAVE_STORAGE': [storage_conv_handler]}
+        login_conv_handler = ConversationHandler(entry_points=login_entry_points,
+                                                 states=login_states,
+                                                 fallbacks=fallbacks)
+
+        # First group of handlers - conversation to set token or storage and a message handler
         self.dispatcher.add_handler(login_conv_handler, 1)
+        self.dispatcher.add_handler(storage_conv_handler, 1)
         self.dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command),
                                                    self.save_to_notion), 1)
 
         # Second group of handlers - commands
         self.dispatcher.add_handler(CommandHandler('start', self.start), 2)
-        self.dispatcher.add_handler(CommandHandler('get_pages', self.get_pages), 2)
 
     def run(self, server=None, webhook_mode=False):
         """Runs a bot either in a webhook mode, or via start_polling"""
@@ -46,7 +55,12 @@ class NoteBot():
     @staticmethod
     def start(update, context):
         """Sends instructions"""
-        instructions = 'blabla'
+        intro = 'Thanks for using NoteBot.'
+        step_1 = '1. You will need a Notion token to start: https://miro.medium.com/max/1400/0*_0NUXhsu4n59c85_.png'
+        step_2 = '2. Use /login command to connect your Notion account.'
+        step_3 = '3. Use /set_storage command to set the page for items you will want to save.'
+        step_4 = '4. After everything is set up, just send a link or a text to the bot.'
+        instructions = '\n'.join((intro, step_1, step_2, step_3, step_4))
         context.bot.send_message(chat_id=update.effective_chat.id, text=instructions)
 
     @staticmethod
@@ -72,8 +86,31 @@ class NoteBot():
             self.redis_manager.create_user(user_id, user_name)
             self.redis_manager.save_notion_token(user_id, token)
 
-        context.user_data['notion_manager'] = NotionManager(token)
-        context.bot.send_message(chat_id=update.effective_chat.id, text='You are all set! Send me something to save it to Notion!')
+        if not self.redis_manager.get_storage(user_id):
+            return 'SAVE_STORAGE'
+
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='You are all set! Send me something to save it to Notion!')
+        return ConversationHandler.END
+
+    @staticmethod
+    def set_storage(update, context):
+        """Start a conversation to set URL for saving items"""
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Send me the URL of the Notion page you want to use fpr saving items')
+        return 'SAVE_STORAGE'
+
+    def save_storage(self, update, context):
+        """Create or update storage URL in Redis"""
+        storage = update.message.text
+        user_id = update.message.from_user.id
+        if self.redis_manager.find_user_by_id(user_id):
+            self.redis_manager.save_storage(user_id, storage)
+        else:
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text='You need to login before setting a storage')
+
+        context.user_data['storage'] = storage
         return ConversationHandler.END
 
     def save_to_notion(self, update, context):
@@ -87,21 +124,22 @@ class NoteBot():
                                      text='Item saved!')
 
         elif self.redis_manager.find_user_by_id(user_id) & bool(self.redis_manager.get_notion_token(user_id)):
-           token = self.redis_manager.get_notion_token(user_id).decode('UTF-8')
+            token = self.redis_manager.get_notion_token(user_id).decode('UTF-8')
+            storage = self.redis_manager.get_storage(user_id)
 
-           try:
-            context.user_data['notion_manager'] = NotionManager(token)
-            context.user_data['notion_manager'].save_item(item)
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text='Item saved!')
+            try:
+                context.user_data['notion_manager'] = NotionManager(token, storage)
+                context.user_data['notion_manager'].save_item(item)
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text='Item saved!')
 
-           except requests.HTTPError as error:
-               context.bot.send_message(chat_id=update.effective_chat.id,
-                                        text=str(error))
+            except requests.HTTPError as error:
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=str(error))
         else:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Oooops! Looks like you need to set your token')
 
     @staticmethod
-    def get_pages(self, update, context):
+    def set_storage(self, update, context):
         context.user_data['notion_manager'].get_top_level_pages()

@@ -19,3 +19,10 @@ class RedisManager():
 
     def get_notion_token(self, user_id):
         return self.redis.hget(user_id, 'notion_token')
+
+    def save_storage(self, user_id, storage):
+        self.redis.hset(user_id, 'storage', storage)
+        return
+
+    def get_storage(self, user_id):
+        return self.redis.hget(user_id, 'storage')
