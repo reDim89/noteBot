@@ -19,8 +19,7 @@ class NoteBot:
         fallbacks = [MessageHandler(Filters.command, self.cancel)]
 
         # Storage conversation
-        storage_entry_points = [CallbackQueryHandler(self.save_storage, pattern='^' + 'https://www.notion.so/.*'),
-                                CommandHandler('set_storage', self.set_storage)]
+        storage_entry_points = [CommandHandler('set_storage', self.set_storage)]
         storage_states = {'SAVE_STORAGE': [MessageHandler(Filters.text, self.save_storage)]}
         storage_conv_handler = ConversationHandler(entry_points=storage_entry_points,
                                                    states=storage_states,
@@ -92,8 +91,8 @@ class NoteBot:
 
         if not self.redis_manager.get_storage(user_id):
             context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text='Send me the URL of the Notion page you want to use fpr saving items')
-            return 'SET_STORAGE'
+                                     text='Now use /set_storage command to set the page for saving items')
+            return ConversationHandler.END
 
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text='You are all set! Send me something to save it to Notion!')
@@ -102,7 +101,7 @@ class NoteBot:
     def set_storage(self, update, context):
         """Start a conversation to set URL for saving items"""
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text='Now use /set_storage command to set the page for saving items')
+                                 text='Send me the URL of the Notion page you want to use fpr saving items')
         return 'SAVE_STORAGE'
 
     def save_storage(self, update, context):
