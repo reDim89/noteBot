@@ -43,7 +43,6 @@ class NoteBot:
         # Second group of handlers - commands
         self.dispatcher.add_handler(CommandHandler('start', self.start), 2)
         self.dispatcher.add_handler(CommandHandler('cancel', self.cancel), 2)
-        self.dispatcher.add_handler(CommandHandler('set_storage', self.set_storage), 2)
 
     def run(self, server=None, webhook_mode=False):
         """Runs a bot either in a webhook mode, or via start_polling"""
