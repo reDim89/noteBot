@@ -2,8 +2,12 @@ import redis
 import os
 
 
-class RedisManager():
-    def __init__(self, host='localhost', port=6379, db=0):
+class RedisManager:
+    def __init__(self, host='localhost', port=6379, db=0, debug=False):
+        if debug:
+            self.redis = redis.Redis()
+            return
+
         self.redis = redis.from_url(os.environ.get("REDIS_URL"))
 
     def create_user(self, user_id, user_name):
