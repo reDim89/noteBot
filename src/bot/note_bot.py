@@ -61,7 +61,7 @@ class NoteBot:
         """Sends instructions"""
         intro = 'Thanks for using NoteBot.'
         step_1 = '1. You will need a Notion token to start: https://miro.medium.com/max/1400/0*_0NUXhsu4n59c85_.png'
-        step_2 = '2. Use /login command to connect your Notion account.'
+        step_2 = '2. Use /set_token command to connect your Notion account.'
         step_3 = '3. Use /set_storage command to set the page for items you will want to save.'
         step_4 = '4. After everything is set up, just send a link or a text to the bot.'
         instructions = '\n'.join((intro, step_1, step_2, step_3, step_4))
@@ -103,7 +103,7 @@ class NoteBot:
     def set_storage(self, update, context):
         """Start a conversation to set URL for saving items"""
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text='Send me the URL of the Notion page you want to use fpr saving items')
+                                 text='Now use /set_storage command to set the page for saving items')
         return 'SAVE_STORAGE'
 
     def save_storage(self, update, context):
