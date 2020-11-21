@@ -6,7 +6,11 @@ from telegram.ext import ConversationHandler, CallbackQueryHandler
 from src.notion.notion_manager import NotionManager
 
 
-# TODO Сделать сохранение в тело заметки, а не в тайтл
+# TODO Сделать метод вывода страниц
+# TODO Сделать запрос заголовка (если пустой, то будет выбираться datetime + первые X символов
+# TODO Вынести в Helper дублирующийся код (проверка, что у бота сохранен notion manager в контексте)
+
+# Возможно, хелпер надо вызывать не в боте, т.к. это вроде как presentational layer, а в Notion Manager?
 
 
 class NoteBot:
@@ -32,6 +36,9 @@ class NoteBot:
         login_conv_handler = ConversationHandler(entry_points=login_entry_points,
                                                  states=login_states,
                                                  fallbacks=fallbacks)
+
+        # Saving conversation
+
 
         # First group of handlers - conversation to set token or storage and a message handler
         self.dispatcher.add_handler(login_conv_handler, 1)
@@ -116,6 +123,9 @@ class NoteBot:
 
         context.user_data['storage'] = storage
         return ConversationHandler.END
+
+    def get_pages(self, update, context):
+        pass
 
     def save_to_notion(self, update, context):
         """Save received text to Notion"""

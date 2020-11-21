@@ -16,7 +16,5 @@ class NotionManager(NotionClient):
         block.children.add_new(TextBlock, title=item)
         return 'Item saved!'
 
-    @staticmethod
-    def set_storage(user, url):
-        r = RedisManager()
-        r.set(user, url)
+    def get_pages(self):
+        pass
