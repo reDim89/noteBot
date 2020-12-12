@@ -14,8 +14,6 @@ class NoteBot:
     def __init__(self, token, redis_manager):
         self.token = token
         self.redis_manager = redis_manager
-        self.notion_manager = None
-        self.notion_storage = None
         self.updater = Updater(token, use_context=True)
         self.dispatcher = self.updater.dispatcher
 
@@ -48,7 +46,7 @@ class NoteBot:
         self.dispatcher.add_handler(CommandHandler('cancel', self.cancel), 2)
 
         # Getting top-level Notion pages
-        self.dispatcher.add_handler(CommandHandler('get_pages', self.get_pages), 2)
+        self.dispatcher.add_handler(CommandHandler('get_pages', self.get_pages), 1)
 
     def run(self, server=None, webhook_mode=False):
         """Runs a bot either in a webhook mode, or via start_polling"""
@@ -61,39 +59,30 @@ class NoteBot:
         else:
             self.updater.start_polling()
 
-    @property
-    def notion_manager(self):
-        return self.notion_manager
-
-    @property.getter
-    def notion_manager(self, context):
+    def notion_manager(self, update, context):
         try:
             return context.user_data['notion_manager']
         except KeyError:
             pass
         try:
-            user_id = context.user_data['id']
-            token = self.redis_manager.get_notion_token(user_id)
+            user_id = update.message.from_user.id
+            token = self.redis_manager.get_notion_token(user_id).decode('utf-8')
             context.user_data['notion_manager'] = NotionManager(token)
             return context.user_data['notion_manager']
         except KeyError:
             raise KeyError('User is missing')
 
-    @property
-    def notion_storage(self):
-        return self.notion_storage
-
-    @property.getter
-    def notion_storage(self, context):
+    def notion_storage(self, update, context):
         try:
             return context.user_data['notion_storage']
         except KeyError:
             pass
         try:
-            user_id = context.user_data['id']
-            return self.redis_manager.get_storage(user_id)
+            user_id = update.message.from_user.id
+            context.user_data['notion_storage'] = self.redis_manager.get_storage(user_id).decode('utf-8')
+            return context.user_data['notion_storage']
         except KeyError:
-            raise KeyError('User is missing')
+            raise KeyError('Storage is missing')
 
     @staticmethod
     def start(update, context):
@@ -130,7 +119,7 @@ class NoteBot:
             self.redis_manager.create_user(user_id, user_name)
             self.redis_manager.save_notion_token(user_id, token)
 
-        if not self.notion_storage:
+        if not self.notion_storage(update, context):
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Now use /set_storage command to set the page for saving items')
             return ConversationHandler.END
@@ -156,14 +145,16 @@ class NoteBot:
                                      text='You need to login before setting a storage')
         return ConversationHandler.END
 
-    def get_pages(self):
-        self.notion_manager.get_page()
+    def get_pages(self, update, context):
+        message = self.notion_manager(update, context).get_pages()
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=message)
 
     def save_to_notion(self, update, context):
         """Save received text to Notion"""
-        user_id = update.message.from_user.id
         item = update.message.text
 
-        self.notion_manager.save_item(item)
+        self.notion_manager(update, context).save_item(item,
+                                                       self.notion_storage(update, context))
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text='Item saved!')

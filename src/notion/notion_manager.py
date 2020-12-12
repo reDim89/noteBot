@@ -4,17 +4,18 @@ from src.utils.redis_manager import RedisManager
 
 
 class NotionManager(NotionClient):
-    def __init__(self, token, storage):
+    def __init__(self, token):
         super().__init__(token_v2=token)
-        self.storage = self.get_block(storage)
 
     def get_pages(self):
-        super().get_top_level_pages()
+        pages = super().get_top_level_pages()
+        titles_urls = [page.title + ': ' + page.get_browseable_url()
+                             for page in filter(lambda x: hasattr(x, 'title'), pages)]
+        response = '\n'.join(item for item in titles_urls)
+        return response
 
-    def save_item(self, item):
-        block = self.storage.children.add_new(PageBlock, title=item[:10])
+    def save_item(self, item, storage):
+        storage_object = self.get_block(storage)
+        block = storage_object.children.add_new(PageBlock, title=item[:50])
         block.children.add_new(TextBlock, title=item)
         return 'Item saved!'
-
-    def get_pages(self):
-        pass
