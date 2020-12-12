@@ -1,14 +1,8 @@
-import requests
 import os
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, Filters, MessageHandler
 from telegram.ext import ConversationHandler, CallbackQueryHandler
 from src.notion.notion_manager import NotionManager
-
-# TODO Отрефакторить создание экземпляров классов NotionManager и RedisManager https://miro.com/app/board/o9J_km4YvHI=/
-# TODO Сделать метод вывода страниц
-# TODO Сделать запрос заголовка (если пустой, то будет выбираться datetime + первые X символов
-
 
 class NoteBot:
     def __init__(self, token, redis_manager):
