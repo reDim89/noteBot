@@ -37,8 +37,6 @@ class NoteBot:
                                                  fallbacks=fallbacks)
 
         # Saving conversation
-
-
         # First group of handlers - conversation to set token or storage and a message handler
         self.dispatcher.add_handler(login_conv_handler, 1)
         self.dispatcher.add_handler(storage_conv_handler, 1)
@@ -48,6 +46,9 @@ class NoteBot:
         # Second group of handlers - commands
         self.dispatcher.add_handler(CommandHandler('start', self.start), 2)
         self.dispatcher.add_handler(CommandHandler('cancel', self.cancel), 2)
+
+        # Getting top-level Notion pages
+        self.dispatcher.add_handler(CommandHandler('get_pages', self.get_pages), 2)
 
     def run(self, server=None, webhook_mode=False):
         """Runs a bot either in a webhook mode, or via start_polling"""
@@ -155,8 +156,8 @@ class NoteBot:
                                      text='You need to login before setting a storage')
         return ConversationHandler.END
 
-    def get_pages(self, update, context):
-        pass
+    def get_pages(self):
+        self.notion_manager.get_page()
 
     def save_to_notion(self, update, context):
         """Save received text to Notion"""

@@ -8,7 +8,7 @@ class NotionManager(NotionClient):
         super().__init__(token_v2=token)
         self.storage = self.get_block(storage)
 
-    def get_top_level_pages(self):
+    def get_pages(self):
         super().get_top_level_pages()
 
     def save_item(self, item):
