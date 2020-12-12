@@ -5,18 +5,17 @@ from telegram.ext import CommandHandler, Filters, MessageHandler
 from telegram.ext import ConversationHandler, CallbackQueryHandler
 from src.notion.notion_manager import NotionManager
 
-
+# TODO Отрефакторить создание экземпляров классов NotionManager и RedisManager https://miro.com/app/board/o9J_km4YvHI=/
 # TODO Сделать метод вывода страниц
 # TODO Сделать запрос заголовка (если пустой, то будет выбираться datetime + первые X символов
-# TODO Вынести в Helper дублирующийся код (проверка, что у бота сохранен notion manager в контексте)
-
-# Возможно, хелпер надо вызывать не в боте, т.к. это вроде как presentational layer, а в Notion Manager?
 
 
 class NoteBot:
     def __init__(self, token, redis_manager):
         self.token = token
         self.redis_manager = redis_manager
+        self.notion_manager = None
+        self.notion_storage = None
         self.updater = Updater(token, use_context=True)
         self.dispatcher = self.updater.dispatcher
 
@@ -61,6 +60,40 @@ class NoteBot:
         else:
             self.updater.start_polling()
 
+    @property
+    def notion_manager(self):
+        return self.notion_manager
+
+    @property.getter
+    def notion_manager(self, context):
+        try:
+            return context.user_data['notion_manager']
+        except KeyError:
+            pass
+        try:
+            user_id = context.user_data['id']
+            token = self.redis_manager.get_notion_token(user_id)
+            context.user_data['notion_manager'] = NotionManager(token)
+            return context.user_data['notion_manager']
+        except KeyError:
+            raise KeyError('User is missing')
+
+    @property
+    def notion_storage(self):
+        return self.notion_storage
+
+    @property.getter
+    def notion_storage(self, context):
+        try:
+            return context.user_data['notion_storage']
+        except KeyError:
+            pass
+        try:
+            user_id = context.user_data['id']
+            return self.redis_manager.get_storage(user_id)
+        except KeyError:
+            raise KeyError('User is missing')
+
     @staticmethod
     def start(update, context):
         """Sends instructions"""
@@ -96,7 +129,7 @@ class NoteBot:
             self.redis_manager.create_user(user_id, user_name)
             self.redis_manager.save_notion_token(user_id, token)
 
-        if not self.redis_manager.get_storage(user_id):
+        if not self.notion_storage:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='Now use /set_storage command to set the page for saving items')
             return ConversationHandler.END
@@ -120,8 +153,6 @@ class NoteBot:
         else:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text='You need to login before setting a storage')
-
-        context.user_data['storage'] = storage
         return ConversationHandler.END
 
     def get_pages(self, update, context):
@@ -132,24 +163,6 @@ class NoteBot:
         user_id = update.message.from_user.id
         item = update.message.text
 
-        if 'notion_manager' in context.user_data.keys():
-            context.user_data['notion_manager'].save_item(item)
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text='Item saved!')
-
-        elif self.redis_manager.find_user_by_id(user_id) & bool(self.redis_manager.get_notion_token(user_id)):
-            token = self.redis_manager.get_notion_token(user_id).decode('UTF-8')
-            storage = self.redis_manager.get_storage(user_id).decode('UTF-8')
-
-            try:
-                context.user_data['notion_manager'] = NotionManager(token, storage)
-                context.user_data['notion_manager'].save_item(item)
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text='Item saved!')
-
-            except requests.HTTPError as error:
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text=str(error))
-        else:
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text='Oooops! Looks like you need to set your token')
+        self.notion_manager.save_item(item)
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Item saved!')
